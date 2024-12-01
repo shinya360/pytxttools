@@ -1,0 +1,122 @@
+BoxLayout:
+    orientation: 'vertical'
+    padding: 10
+    spacing: 10
+
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 10
+        spacing: 10
+
+        BoxLayout:
+            size_hint_y: None
+            height: 300  # Increased height for better centering
+            Label:
+                text: 'English to Spanish'
+                font_size: 100
+                halign: 'center'
+                valign: 'middle'
+                text_size: self.size
+
+        TextInput:
+            id: en_input_text
+            hint_text: 'Enter English text here'
+            multiline: True
+            size_hint_y: None
+            height: 100
+
+        TextInput:
+            id: es_output_text
+            hint_text: 'Spanish translation will appear here'
+            multiline: True
+            size_hint_y: None
+            height: 100
+
+        BoxLayout:
+            orientation: 'horizontal'
+            size_hint_y: None
+            height: 100  # Increased height for buttons
+            spacing: 10
+
+            Button:
+                id: en_to_es_speak_button
+                text: 'Speak Translation'
+                background_normal: ''
+                background_color: (0.2, 0.6, 1, 1)
+                border: (20, 20, 20, 20)
+                on_press: app.speak_es_translation(self)
+
+            Button:
+                id: en_to_es_translate_button
+                text: 'Translate to Spanish'
+                background_normal: ''
+                background_color: (0.2, 0.6, 1, 1)
+                border: (20, 20, 20, 20)
+                on_press: app.translate_en_to_es(self)
+
+            Button:
+                id: en_to_es_mic_button
+                text: 'Microphone Input (EN)'
+                background_normal: ''
+                background_color: (0.2, 0.6, 1, 1)
+                border: (20, 20, 20, 20)
+                on_press: app.listen_english(self)
+
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 10
+        spacing: 10
+
+        BoxLayout:
+            size_hint_y: None
+            height: 300  # Increased height for better centering
+            Label:
+                text: 'Spanish to English'
+                font_size: 100
+                halign: 'center'
+                valign: 'middle'
+                text_size: self.size
+
+        TextInput:
+            id: es_input_text
+            hint_text: 'Enter Spanish text here'
+            multiline: True
+            size_hint_y: None
+            height: 100
+
+        TextInput:
+            id: en_output_text
+            hint_text: 'English translation will appear here'
+            multiline: True
+            size_hint_y: None
+            height: 100
+
+        BoxLayout:
+            orientation: 'horizontal'
+            size_hint_y: None
+            height: 100  # Increased height for buttons
+            spacing: 10
+
+            Button:
+                id: es_to_en_speak_button
+                text: 'Speak Translation'
+                background_normal: ''
+                background_color: (0.2, 0.6, 1, 1)
+                border: (20, 20, 20, 20)
+                on_press: app.speak_en_translation(self)
+
+            Button:
+                id: es_to_en_translate_button
+                text: 'Translate to English'
+                background_normal: ''
+                background_color: (0.2, 0.6, 1, 1)
+                border: (20, 20, 20, 20)
+                on_press: app.translate_es_to_en(self)
+
+            Button:
+                id: es_to_en_mic_button
+                text: 'Microphone Input (ES)'
+                background_normal: ''
+                background_color: (0.2, 0.6, 1, 1)
+                border: (20, 20, 20, 20)
+                on_press: app.listen_spanish(self)
