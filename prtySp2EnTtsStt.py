@@ -78,12 +78,27 @@ BoxLayout:
 
             Button:
                 id: en_to_es_mic_button
-                text: 'Microphone Input (EN)'
+                text: 'Mic Input(EN)'
                 background_normal: ''
                 background_color: (0.2, 0.6, 1, 1)
                 border: (20, 20, 20, 20)
                 on_press: app.listen_english(self)
 
+            Button:
+                id: copy_spanish_button
+                text: 'Copy to Clipboard'
+                background_normal: ''
+                background_color: (0.2, 0.6, 1, 1)
+                border: (20, 20, 20, 20)
+                on_press: app.copy_spanish(self)
+
+            Button:
+                id: paste_english_button
+                text: 'Paste'
+                background_normal: ''
+                background_color: (0.2, 0.6, 1, 1)
+                border: (20, 20, 20, 20)
+                on_press: app.paste_english(self)
     BoxLayout:
         orientation: 'vertical'
         padding: 10
@@ -137,11 +152,27 @@ BoxLayout:
 
             Button:
                 id: es_to_en_mic_button
-                text: 'Microphone Input (ES)'
+                text: 'Mic Input(ES)'
                 background_normal: ''
                 background_color: (0.2, 0.6, 1, 1)
                 border: (20, 20, 20, 20)
-                on_press: app.listen_spanish(self)''')
+                on_press: app.listen_spanish(self)
+                
+            Button:
+                id: copy_english_button
+                text: 'Copy to Clipboard'
+                background_normal: ''
+                background_color: (0.2, 0.6, 1, 1)
+                border: (20, 20, 20, 20)
+                on_press: app.copy_english(self)
+                
+            Button:
+                id: paste_spanish_button
+                text: 'Paste'
+                background_normal: ''
+                background_color: (0.2, 0.6, 1, 1)
+                border: (20, 20, 20, 20)
+                on_press: app.paste_spanish(self)''')
         return container
         #return Builder.load_file('test.kv')
 
@@ -214,6 +245,11 @@ BoxLayout:
     def listen_spanish(self, button):
         button.background_color = (1, 0, 0, 1)  # Change button color to red while listening
         threading.Thread(target=self.perform_listen, args=('es-ES', self.root.ids.es_input_text, button)).start()
+
+    def copy_spanish(self, button):
+        return
+    def copy_english(self, button):
+        return
 
     def perform_listen(self, language, target_textbox, button):
         recognizer = sr.Recognizer()

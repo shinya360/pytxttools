@@ -7,11 +7,15 @@ from kivy.uix.button import Button
 from kivy.graphics.texture import Texture
 from kivy.core.window import Window
 from plyer import filechooser
+from kivy.clock import Clock
+import threading
+import time
 
 
 class PDFViewerApp(App):
     def build(self):
         self.layout = BoxLayout(orientation='vertical')
+
         self.file_chooser_button = Button(text="Choose PDF File", size_hint=(1, 0.1))
         self.file_chooser_button.bind(on_release=self.open_file_chooser)
         self.layout.add_widget(self.file_chooser_button)
@@ -20,6 +24,30 @@ class PDFViewerApp(App):
         self.current_page = 0
         self.page_paragraphs = {}
         self.current_paragraph = 0
+        self.tts_thread = None
+        self.tts_pause_event = threading.Event()
+        self.tts_pause_event.set()  # Start with TTS paused
+
+        # Combine all navigation buttons in a single row
+        self.button_layout = BoxLayout(size_hint=(1, 0.1))
+
+        # Page navigation buttons
+        prev_page_button = Button(text="Previous Page", size_hint=(0.14, 1), on_release=self.show_previous_page)
+        next_page_button = Button(text="Next Page", size_hint=(0.14, 1), on_release=self.show_next_page)
+
+        # Paragraph navigation buttons
+        prev_paragraph_button = Button(text="Previous Paragraph", size_hint=(0.14, 1),
+                                       on_release=self.show_previous_paragraph)
+        next_paragraph_button = Button(text="Next Paragraph", size_hint=(0.14, 1), on_release=self.show_next_paragraph)
+
+        # Pause/Resume TTS button
+        self.pause_resume_button = Button(text="Resume", size_hint=(0.14, 1), on_release=self.pause_resume_tts)
+
+        self.button_layout.add_widget(prev_page_button)
+        self.button_layout.add_widget(next_page_button)
+        self.button_layout.add_widget(prev_paragraph_button)
+        self.button_layout.add_widget(next_paragraph_button)
+        self.button_layout.add_widget(self.pause_resume_button)
 
         return self.layout
 
@@ -30,26 +58,31 @@ class PDFViewerApp(App):
         if selection:
             pdf_path = selection[0]
             self.pdf_document = fitz.open(pdf_path)
+            self.layout.remove_widget(self.file_chooser_button)  # Remove the file chooser button after selection
+            self.layout.add_widget(self.button_layout)  # Add navigation buttons
             self.current_page = 0
             self.extract_paragraphs()
             self.display_pdf_page(self.current_page)
+            self.start_tts()  # Start the TTS functionality after loading the PDF
 
     def extract_paragraphs(self):
         self.page_paragraphs = {}
         for page_num in range(self.pdf_document.page_count):
             page = self.pdf_document.load_page(page_num)
-            text = page.get_text("text").strip()
-            if text:  # Only add non-empty text
-                self.page_paragraphs[page_num] = text.split("\n\n")
-        for page_num in self.page_paragraphs:
-            self.page_paragraphs[page_num] = [para for para in self.page_paragraphs[page_num] if
-                                              para.strip()]  # Remove empty paragraphs
+            blocks = page.get_text("blocks")
+            paragraphs = []
+            for b in blocks:
+                text = b[4].strip()
+                if text:  # Only add non-empty text
+                    paragraphs.append((b, text))
+            self.page_paragraphs[page_num] = paragraphs
 
     def display_pdf_page(self, page_num):
         if not self.pdf_document:
             return
 
-        self.layout.clear_widgets()
+        if hasattr(self, 'scrollview'):
+            self.layout.remove_widget(self.scrollview)
 
         page = self.pdf_document.load_page(page_num)
         pix = page.get_pixmap()
@@ -61,27 +94,15 @@ class PDFViewerApp(App):
 
         image = Image(texture=texture, allow_stretch=True, keep_ratio=True, size_hint=(1, 1))
 
-        scrollview = ScrollView(size_hint=(1, 0.9))  # Use most of the available space
-        scrollview.add_widget(image)
-        self.layout.add_widget(scrollview)
+        # Highlight the current paragraph
+        if self.current_page in self.page_paragraphs and self.page_paragraphs[self.current_page]:
+            current_block = self.page_paragraphs[self.current_page][self.current_paragraph][0]
+            rect = fitz.Rect(current_block[:4])
+            highlight = page.add_highlight_annot(rect)
 
-        # Combine all navigation buttons in a single row
-        button_layout = BoxLayout(size_hint=(1, 0.1))
-
-        # Page navigation buttons
-        prev_page_button = Button(text="Previous Page", size_hint=(0.25, 1), on_release=self.show_previous_page)
-        next_page_button = Button(text="Next Page", size_hint=(0.25, 1), on_release=self.show_next_page)
-
-        # Paragraph navigation buttons
-        prev_paragraph_button = Button(text="Previous Paragraph", size_hint=(0.25, 1),
-                                       on_release=self.show_previous_paragraph)
-        next_paragraph_button = Button(text="Next Paragraph", size_hint=(0.25, 1), on_release=self.show_next_paragraph)
-
-        button_layout.add_widget(prev_page_button)
-        button_layout.add_widget(next_page_button)
-        button_layout.add_widget(prev_paragraph_button)
-        button_layout.add_widget(next_paragraph_button)
-        self.layout.add_widget(button_layout)
+        self.scrollview = ScrollView(size_hint=(1, 0.9))  # Use most of the available space
+        self.scrollview.add_widget(image)
+        self.layout.add_widget(self.scrollview, index=1)
 
     def show_previous_page(self, instance):
         if self.current_page > 0:
@@ -117,6 +138,31 @@ class PDFViewerApp(App):
                 self.current_paragraph = 0
                 self.display_pdf_page(self.current_page)
             self.display_pdf_page(self.current_page)
+
+    def pause_resume_tts(self, instance):
+        if self.tts_thread and self.tts_thread.is_alive():
+            if self.tts_pause_event.is_set():
+                self.tts_pause_event.clear()
+                Clock.schedule_once(lambda dt: self.update_button_text("Pause"), 0)
+            else:
+                self.tts_pause_event.set()
+                Clock.schedule_once(lambda dt: self.update_button_text("Resume"), 0)
+
+    def update_button_text(self, text):
+        self.pause_resume_button.text = text
+
+    def text_to_speech(self):
+        while True:
+            if not self.tts_pause_event.is_set():
+                # Placeholder for TTS functionality
+                print("Performing text-to-speech...")
+            time.sleep(1)
+        print("TTS paused")
+
+    def start_tts(self):
+        if not self.tts_thread or not self.tts_thread.is_alive():
+            self.tts_thread = threading.Thread(target=self.text_to_speech)
+            self.tts_thread.start()
 
 
 if __name__ == "__main__":
